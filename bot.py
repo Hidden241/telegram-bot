@@ -71,7 +71,7 @@ def detect_mots(update, context):
         update.message.reply_text(f"🤐 @{user.username or user.first_name} a été réduit au silence pour 10 minutes.")
 
 def main():
-    TOKEN = os.getenv("BOT_TOKEN")
+    TOKEN = os.getenv("TON_TOKEN_BOT")
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
 
