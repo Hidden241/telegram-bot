@@ -89,7 +89,7 @@ def traiter_media(update, context):
             context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
             context.bot.send_message(
                 chat_id=message.chat_id,
-                text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté)."
+                text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté : Petit pédophile)."
             )
 
 # === Main ===
