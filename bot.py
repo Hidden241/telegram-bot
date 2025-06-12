@@ -20,8 +20,10 @@ HASH_INTERDITS = {
 }
 
 # === Utilisateurs autorisés à tester le bot en privé ===
+# === Utilisateurs autorisés à tester le bot en privé ===
 TEST_AUTORISÉS = {
-    5296696302  # 👈 Remplace ceci par TON ID TELEGRAM
+    7274386267,  # ex: @IiiilIlilllillilillll
+    5296696302   # ex: @op75x15
 }
 
 # === Fonctions utilitaires ===
@@ -102,7 +104,7 @@ def traiter_media(update, context):
             context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
             context.bot.send_message(
                 chat_id=message.chat_id,
-                text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté)."
+                text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté: Petit Pédophile)."
             )
 
 # === Lancement du bot ===
