@@ -10,8 +10,14 @@ from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 
 # === Hashs interdits ===
 HASH_INTERDITS = {
-    "8f0f0f070705071c",  # image interdite
-    "007d070303bfffff",  # vidéo interdite (hash première frame)
+    "007d070303bfffff",
+    "3c7ee7cfefc40000",
+    "00007f7f031fffff",
+    "0406357ffffb3300",
+    "829193c7f67e0ef7",
+    "ffff8f0f0f070200",
+    "f1fe4c721e7ce0d8",
+    "00803c3e2e2c2030"
 }
 
 # === Fonction imagehash (image ou vidéo frame) ===
