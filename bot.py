@@ -5,7 +5,7 @@ def start(update, context):
     update.message.reply_text("Bot en ligne !")
 
 def main():
-    TOKEN = os.getenv("8131425515:AAH76rY-86ooMlI-Gb895T-Zoosc0ZYk7wc")
+    TOKEN = os.getenv("TON_TOKEN_BOT")
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
