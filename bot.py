@@ -1,74 +1,55 @@
 import os
+import requests
+from io import BytesIO
+from PIL import Image
+import imagehash
+from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 from telegram import ChatPermissions
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ChatMemberHandler
 
-# Liste des vidéos interdites (file_id à adapter)
-VIDEOS_INTERDITES = {
-    "ABC123==",
-    "XYZ456=="
+# Hashs d'images interdites
+HASH_INTERDITS = {
+    "8f0f0f070705071c"
 }
 
-# Liste des mots interdits
-MOTS_INTERDITS = {"mahely", "mahely."}
+# Analyse une image et retourne True si interdite
+def image_est_interdite(photo, context):
+    file = context.bot.get_file(photo.file_id)
+    response = requests.get(file.file_path)
+    img = Image.open(BytesIO(response.content))
+    hash_image = str(imagehash.average_hash(img))
+    return hash_image in HASH_INTERDITS, hash_image
 
-# Quand le bot est ajouté à un groupe
-def handle_chat_member(update, context):
-    chat_member = update.my_chat_member
-    if chat_member.new_chat_member.status == "member":
-        context.bot.send_message(
-            chat_id=chat_member.chat.id,
-            text="🛡️ Je commence ma mission de surveillance dans ce groupe."
-        )
-
-# Commande /start
+# Démarrage
 def start(update, context):
-    if update.message.chat.type == "private":
+    chat_type = update.message.chat.type
+    if chat_type == "private":
         update.message.reply_text(
-            "👋 Je suis un bot de modération. "
-            "Ajoute-moi dans un groupe et donne-moi les droits nécessaires pour que je puisse fonctionner."
+            "👋 Je suis en **mode test**.\n"
+            "Envoie-moi une image ici pour que je te dise si elle est bannissable."
         )
     else:
         update.message.reply_text(
-            "👋 Bonjour, je suis chargé de réguler ce groupe.\n"
-            "Je suis l'**anti PEDO Java**, ici pour bannir les vidéos interdites "
-            "et réduire au silence ceux qui enfreignent les règles.\n"
-            "Tape /aide pour en savoir plus."
+            "🛡️ Je suis actif dans ce groupe et prêt à bannir les images interdites."
         )
 
-# Commande /aide
-def aide(update, context):
-    update.message.reply_text(
-        "📌 Ce que je fais :\n"
-        "- Je bannis les utilisateurs qui envoient certaines vidéos interdites.\n"
-        "- Je réduis au silence pendant 10 minutes ceux qui utilisent certains mots.\n"
-        "🛡️ Respectez les règles du groupe !"
-    )
-
-# Détection des vidéos interdites
-def detect_video(update, context):
+# Traitement des images
+def traiter_image(update, context):
     message = update.message
     user = message.from_user
-    video = message.video
+    photo = message.photo[-1]
 
-    if video and video.file_id in VIDEOS_INTERDITES:
-        context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
-        update.message.reply_text(f"🚫 @{user.username or user.first_name} a été banni (vidéo interdite).")
+    chat_type = message.chat.type
+    image_interdite, hash_calcule = image_est_interdite(photo, context)
 
-# Mute temporaire en cas de mot interdit
-def detect_mots(update, context):
-    message = update.message
-    text = message.text.lower()
-    user = message.from_user
-
-    if any(mot in text for mot in MOTS_INTERDITS):
-        permissions = ChatPermissions(can_send_messages=False)
-        context.bot.restrict_chat_member(
-            chat_id=message.chat_id,
-            user_id=user.id,
-            permissions=permissions,
-            until_date=message.date + 600
-        )
-        update.message.reply_text(f"🤐 @{user.username or user.first_name} a été réduit au silence pour 10 minutes.")
+    if chat_type == "private":
+        if image_interdite:
+            message.reply_text(f"⚠️ Cette image est interdite ! (hash: {hash_calcule})")
+        else:
+            message.reply_text(f"✅ Cette image est autorisée. (hash: {hash_calcule})")
+    else:
+        if image_interdite:
+            context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
+            message.reply_text(f"🚫 @{user.username or user.first_name} a été banni (image interdite détectée).")
 
 def main():
     TOKEN = os.getenv("TON_TOKEN_BOT")
@@ -76,10 +57,7 @@ def main():
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("aide", aide))
-    dp.add_handler(MessageHandler(Filters.video, detect_video))
-    dp.add_handler(MessageHandler(Filters.text & (~Filters.command), detect_mots))
-    dp.add_handler(ChatMemberHandler(handle_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
+    dp.add_handler(MessageHandler(Filters.photo, traiter_image))
 
     updater.start_polling()
     updater.idle()
