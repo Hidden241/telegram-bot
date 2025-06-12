@@ -24,26 +24,23 @@ def handle_chat_member(update, context):
 def start(update, context):
     if update.message.chat.type == "private":
         update.message.reply_text(
-            "👋 Je suis un bot de modération. Ajoute-moi dans un groupe et donne-moi les droits nécessaires pour que je puisse fonctionner."
+            "👋 Je suis un bot de modération. "
+            "Ajoute-moi dans un groupe et donne-moi les droits nécessaires pour que je puisse fonctionner."
         )
     else:
         update.message.reply_text(
-            "👋 Bonjour, je suis chargé de réguler ce groupe.
-"
-            "Je suis l'**ant pédophile Java**, ici pour bannir les vidéos interdites et réduire au silence ceux qui enfreignent les règles.
-"
+            "👋 Bonjour, je suis chargé de réguler ce groupe.\n"
+            "Je suis l'**anti PEDO Java**, ici pour bannir les vidéos interdites "
+            "et réduire au silence ceux qui enfreignent les règles.\n"
             "Tape /aide pour en savoir plus."
         )
 
 # Commande /aide
 def aide(update, context):
     update.message.reply_text(
-        "📌 Ce que je fais :
-"
-        "- Je bannis les utilisateurs qui envoient certaines vidéos interdites.
-"
-        "- Je réduis au silence pendant 10 minutes ceux qui utilisent certains mots.
-"
+        "📌 Ce que je fais :\n"
+        "- Je bannis les utilisateurs qui envoient certaines vidéos interdites.\n"
+        "- Je réduis au silence pendant 10 minutes ceux qui utilisent certains mots.\n"
         "🛡️ Respectez les règles du groupe !"
     )
 
