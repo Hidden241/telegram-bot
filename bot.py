@@ -5,12 +5,11 @@ from PIL import Image
 import imagehash
 import cv2
 import tempfile
-
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 
-# === Hashs interdits ===
+# === Liste des hash interdits (images et vidéos) ===
 HASH_INTERDITS = {
-    "007d070303bfffff",
+    "007d070303bfffff",  # vidéo 1
     "3c7ee7cfefc40000",
     "00007f7f031fffff",
     "0406357ffffb3300",
@@ -20,18 +19,21 @@ HASH_INTERDITS = {
     "00803c3e2e2c2030"
 }
 
-# === Fonction imagehash (image ou vidéo frame) ===
+# === Utilisateurs autorisés à tester le bot en privé ===
+TEST_AUTORISÉS = {
+    5296696302  # 👈 Remplace ceci par TON ID TELEGRAM
+}
+
+# === Fonctions utilitaires ===
 def calculer_hash_image(img: Image.Image) -> str:
     return str(imagehash.average_hash(img))
 
-# === Traitement d'une image Telegram ===
 def verifier_image(photo, context):
     file = context.bot.get_file(photo.file_id)
     response = requests.get(file.file_path)
     img = Image.open(BytesIO(response.content))
     return calculer_hash_image(img)
 
-# === Traitement d'une vidéo Telegram (extraire frame + hasher) ===
 def verifier_video(video, context):
     file = context.bot.get_file(video.file_id)
     video_url = file.file_path
@@ -53,20 +55,31 @@ def verifier_video(video, context):
         return calculer_hash_image(img)
     return None
 
-# === START Commande ===
+# === Commande /start ===
 def start(update, context):
     chat_type = update.message.chat.type
     if chat_type == "private":
-        update.message.reply_text("👋 Mode test actif.\nEnvoie-moi une image ou une vidéo.")
+        if update.message.from_user.id in TEST_AUTORISÉS:
+            update.message.reply_text(
+                "👋 Mode test activé.\nEnvoie-moi une image ou vidéo pour vérification."
+            )
+        else:
+            update.message.reply_text("⛔ Tu n’es pas autorisé à tester ce bot.")
     else:
-        update.message.reply_text("🛡️ Je suis actif pour bannir les images et vidéos interdites.")
+        update.message.reply_text("🛡️ Je suis actif pour modérer ce groupe.")
 
-# === Traitement général ===
+# === Traitement image ou vidéo ===
 def traiter_media(update, context):
     message = update.message
     user = message.from_user
     chat_type = message.chat.type
 
+    # Sécurité : limiter l'accès au test
+    if chat_type == "private" and user.id not in TEST_AUTORISÉS:
+        message.reply_text("⛔ Tu n’es pas autorisé à tester ce bot.")
+        return
+
+    # Détection du type de média
     if message.photo:
         hash_calcule = verifier_image(message.photo[-1], context)
     elif message.video:
@@ -80,7 +93,7 @@ def traiter_media(update, context):
 
     if chat_type == "private":
         if hash_calcule in HASH_INTERDITS:
-            message.reply_text(f"🚫 Ce média est interdit. (hash : {hash_calcule})")
+            message.reply_text(f"🚫 Ce média est INTERDIT. (hash : {hash_calcule})")
         else:
             message.reply_text(f"✅ Ce média est autorisé. (hash : {hash_calcule})")
     else:
@@ -89,10 +102,10 @@ def traiter_media(update, context):
             context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
             context.bot.send_message(
                 chat_id=message.chat_id,
-                text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté : Petit pédophile)."
+                text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté)."
             )
 
-# === Main ===
+# === Lancement du bot ===
 def main():
     TOKEN = os.getenv("TON_TOKEN_BOT")
     updater = Updater(token=TOKEN, use_context=True)
