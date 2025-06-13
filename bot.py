@@ -5,6 +5,8 @@ from PIL import Image
 import imagehash
 import cv2
 import tempfile
+import threading
+from collections import defaultdict
 from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 
 HASH_INTERDITS = {
@@ -14,8 +16,13 @@ HASH_INTERDITS = {
 }
 
 TEST_AUTORISÉS = {
-    123456789  # 🔁 Remplace par ton ID Telegram
+    123456789, 5296696302  # Ajout de @op75x15
 }
+
+MODERATEUR_CHAT_ID = 5296696302  # ID de @op75x15
+
+media_group_cache = defaultdict(list)
+media_group_timers = {}
 
 def calculer_hash_image(img: Image.Image) -> str:
     return str(imagehash.average_hash(img))
@@ -63,6 +70,10 @@ def start(update, context):
                 chat_id=message.chat_id,
                 text=f"🚫 @{user.username or user.first_name} a été banni (commande /start non autorisée)."
             )
+            context.bot.send_message(
+                chat_id=MODERATEUR_CHAT_ID,
+                text=f"📣 J'ai supprimé @{user.username or user.first_name} pour usage non autorisé de /start dans le groupe '{message.chat.title}'."
+            )
         else:
             message.reply_text("🛡️ Je suis actif pour modérer ce groupe.")
 
@@ -75,47 +86,70 @@ def traiter_media(update, context):
         message.reply_text("⛔ Tu n’es pas autorisé à tester ce bot.")
         return
 
-    if message.photo:
-        hash_calcule = verifier_image(message.photo[-1], context)
-    elif message.video:
-        hash_calcule = verifier_video(message.video, context)
-    else:
-        return
+    def analyser_groupe(media_group_id):
+        fichiers = media_group_cache.pop(media_group_id, [])
+        suspect = False
+        for msg in fichiers:
+            hash_calcule = verifier_video(msg.video, context)
+            if not hash_calcule:
+                continue
+            if hash_calcule in HASH_INTERDITS:
+                suspect = True
+                break
 
-    if hash_calcule is None:
-        message.reply_text("⚠️ Impossible de lire le média.")
-        return
-
-    if chat_type == "private":
-        if hash_calcule in HASH_INTERDITS:
-            message.reply_text(f"🚫 Ce média est INTERDIT. (hash : {hash_calcule})")
-        else:
-            message.reply_text(f"✅ Ce média est autorisé. (hash : {hash_calcule})")
-    else:
-        if hash_calcule in HASH_INTERDITS:
-            context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
-            context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
+        if suspect:
+            for msg in fichiers:
+                try:
+                    context.bot.delete_message(chat_id=msg.chat_id, message_id=msg.message_id)
+                except:
+                    pass
+            context.bot.kick_chat_member(chat_id=msg.chat_id, user_id=msg.from_user.id)
             context.bot.send_message(
-                chat_id=message.chat_id,
-                text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté)."
+                chat_id=msg.chat_id,
+                text=f"🚫 @{msg.from_user.username or msg.from_user.first_name} a été banni (média interdit détecté dans un groupe de fichiers)."
+            )
+            context.bot.send_message(
+                chat_id=MODERATEUR_CHAT_ID,
+                text=f"📣 J'ai supprimé @{msg.from_user.username or msg.from_user.first_name} pour envoi de vidéos interdites dans le groupe '{msg.chat.title}'."
             )
 
-import os
+    if message.video and message.media_group_id:
+        mgid = message.media_group_id
+        media_group_cache[mgid].append(message)
+
+        if media_group_timers.get(mgid):
+            media_group_timers[mgid].cancel()
+
+        timer = threading.Timer(3.0, analyser_groupe, args=(mgid,))
+        media_group_timers[mgid] = timer
+        timer.start()
+    elif message.video:
+        hash_calcule = verifier_video(message.video, context)
+        if not hash_calcule:
+            return
+
+        if hash_calcule in HASH_INTERDITS:
+            if chat_type == "private":
+                message.reply_text(f"🚫 Cette vidéo est interdite. (hash : {hash_calcule})")
+            else:
+                context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
+                context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
+                context.bot.send_message(
+                    chat_id=message.chat_id,
+                    text=f"🚫 @{user.username or user.first_name} a été banni (vidéo interdite détectée)."
+                )
+                context.bot.send_message(
+                    chat_id=MODERATEUR_CHAT_ID,
+                    text=f"📣 J'ai supprimé @{user.username or user.first_name} pour envoi de vidéo interdite dans le groupe '{message.chat.title}'."
+                )
+        elif chat_type == "private":
+            message.reply_text(f"✅ Cette vidéo est autorisée. (hash : {hash_calcule})")
 
 def main():
     import logging
     logging.basicConfig(level=logging.INFO)
 
-    print("📦 Variables d’environnement visibles :")
-    for key, value in os.environ.items():
-        print(f"{key} = {value}")
-    
-    import logging
-    logging.basicConfig(level=logging.INFO)
-
     TOKEN = os.getenv("BOT_TOKEN")
-    print(f"🔍 BOT_TOKEN récupéré : {TOKEN}")
-
     if not TOKEN:
         raise RuntimeError("❌ BOT_TOKEN n’est pas défini dans les variables d’environnement !")
 
@@ -123,7 +157,7 @@ def main():
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.photo | Filters.video, traiter_media))
+    dp.add_handler(MessageHandler(Filters.video, traiter_media))
 
     updater.start_polling()
     updater.idle()
