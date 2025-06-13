@@ -65,7 +65,7 @@ def start(update, context):
 
     if chat_type == "private":
         if user_id in TEST_AUTORISÉS:
-            message.reply_text("👋 Mode test activé.\nEnvoie-moi une image ou vidéo pour vérification.")
+            message.reply_text("👋 Mode test activé v2.\nEnvoie-moi une image ou vidéo pour vérification.")
         else:
             message.reply_text("⛔ Tu n’es pas autorisé à tester ce bot.")
     else:
