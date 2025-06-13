@@ -1,0 +1,5 @@
+python-telegram-bot==13.15
+Pillow
+imagehash
+opencv-python-headless
+requests
