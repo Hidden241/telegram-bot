@@ -12,7 +12,8 @@ from telegram.ext import Updater, MessageHandler, Filters, CommandHandler
 HASH_INTERDITS = {
     "8f0f0f070705071c", "007d070303bfffff", "3c7ee7cfefc40000",
     "00007f7f031fffff", "0406357ffffb3300", "829193c7f67e0ef7",
-    "ffff8f0f0f070200", "f1fe4c721e7ce0d8", "00803c3e2e2c2030"
+    "ffff8f0f0f070200", "f1fe4c721e7ce0d8", "00803c3e2e2c2030",
+    "ffff8f0707070300", "8290c1e3763e07f3", "0000000000ffff00", "fce0c0f0e060f0c0"
 }
 
 TEST_AUTORISÉS = {
