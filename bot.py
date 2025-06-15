@@ -20,7 +20,7 @@ TEST_AUTORISÉS = {
     123456789, 5296696302  # Ajout de @op75x15
 }
 
-MODERATEUR_CHAT_ID = 5296696302  # ID de @op75x15
+MODERATEUR_CHAT_ID = 5296696302
 
 media_group_cache = defaultdict(list)
 media_group_timers = {}
@@ -91,7 +91,12 @@ def traiter_media(update, context):
         fichiers = media_group_cache.pop(media_group_id, [])
         suspect = False
         for msg in fichiers:
-            hash_calcule = verifier_video(msg.video, context)
+            hash_calcule = None
+            if msg.video:
+                hash_calcule = verifier_video(msg.video, context)
+            elif msg.photo:
+                hash_calcule = verifier_image(msg.photo[-1], context)
+
             if not hash_calcule:
                 continue
             if hash_calcule in HASH_INTERDITS:
@@ -111,10 +116,10 @@ def traiter_media(update, context):
             )
             context.bot.send_message(
                 chat_id=MODERATEUR_CHAT_ID,
-                text=f"📣 J'ai supprimé @{msg.from_user.username or msg.from_user.first_name} pour envoi de vidéos interdites dans le groupe '{msg.chat.title}'."
+                text=f"📣 J'ai supprimé @{msg.from_user.username or msg.from_user.first_name} pour envoi de médias interdits dans le groupe '{msg.chat.title}'."
             )
 
-    if message.video and message.media_group_id:
+    if (message.video or message.photo) and message.media_group_id:
         mgid = message.media_group_id
         media_group_cache[mgid].append(message)
 
@@ -124,27 +129,31 @@ def traiter_media(update, context):
         timer = threading.Timer(3.0, analyser_groupe, args=(mgid,))
         media_group_timers[mgid] = timer
         timer.start()
-    elif message.video:
-        hash_calcule = verifier_video(message.video, context)
+    elif message.video or message.photo:
+        if message.video:
+            hash_calcule = verifier_video(message.video, context)
+        else:
+            hash_calcule = verifier_image(message.photo[-1], context)
+
         if not hash_calcule:
             return
 
         if hash_calcule in HASH_INTERDITS:
             if chat_type == "private":
-                message.reply_text(f"🚫 Cette vidéo est interdite. (hash : {hash_calcule})")
+                message.reply_text(f"🚫 Ce média est interdit. (hash : {hash_calcule})")
             else:
                 context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
                 context.bot.kick_chat_member(chat_id=message.chat_id, user_id=user.id)
                 context.bot.send_message(
                     chat_id=message.chat_id,
-                    text=f"🚫 @{user.username or user.first_name} a été banni (vidéo interdite détectée)."
+                    text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté)."
                 )
                 context.bot.send_message(
                     chat_id=MODERATEUR_CHAT_ID,
-                    text=f"📣 J'ai supprimé @{user.username or user.first_name} pour envoi de vidéo interdite dans le groupe '{message.chat.title}'."
+                    text=f"📣 J'ai supprimé @{user.username or user.first_name} pour envoi de média interdit dans le groupe '{message.chat.title}'."
                 )
         elif chat_type == "private":
-            message.reply_text(f"✅ Cette vidéo est autorisée. (hash : {hash_calcule})")
+            message.reply_text(f"✅ Ce média est autorisé. (hash : {hash_calcule})")
 
 def main():
     import logging
@@ -158,7 +167,7 @@ def main():
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.video, traiter_media))
+    dp.add_handler(MessageHandler(Filters.video | Filters.photo, traiter_media))
 
     updater.start_polling()
     updater.idle()
