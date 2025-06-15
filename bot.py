@@ -17,10 +17,10 @@ HASH_INTERDITS = {
 }
 
 TEST_AUTORISÉS = {
-    123456789, 5296696302  # Ajout de @op75x15
+    7274386267, 5296696302  # Ajout de @op75x15
 }
 
-MODERATEUR_CHAT_IDS = [5296696302, 123456789]
+MODERATEUR_CHAT_IDS = [5296696302, 7274386267]
 
 media_group_cache = defaultdict(list)
 media_group_timers = {}
