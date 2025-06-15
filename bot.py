@@ -20,7 +20,7 @@ TEST_AUTORISÉS = {
     123456789, 5296696302  # Ajout de @op75x15
 }
 
-MODERATEUR_CHAT_ID = 5296696302
+MODERATEUR_CHAT_IDS = [5296696302, 123456789]
 
 media_group_cache = defaultdict(list)
 media_group_timers = {}
@@ -71,10 +71,11 @@ def start(update, context):
                 chat_id=message.chat_id,
                 text=f"🚫 @{user.username or user.first_name} a été banni (commande /start non autorisée)."
             )
-            context.bot.send_message(
-                chat_id=MODERATEUR_CHAT_ID,
-                text=f"📣 J'ai supprimé @{user.username or user.first_name} pour usage non autorisé de /start dans le groupe '{message.chat.title}'."
-            )
+            for mod_id in MODERATEUR_CHAT_IDS:
+                context.bot.send_message(
+                    chat_id=mod_id,
+                    text=f"📣 J'ai supprimé @{user.username or user.first_name} pour usage non autorisé de /start dans le groupe '{message.chat.title}'."
+                )
         else:
             message.reply_text("🛡️ Je suis actif pour modérer ce groupe.")
 
@@ -114,10 +115,11 @@ def traiter_media(update, context):
                 chat_id=msg.chat_id,
                 text=f"🚫 @{msg.from_user.username or msg.from_user.first_name} a été banni (média interdit détecté dans un groupe de fichiers)."
             )
-            context.bot.send_message(
-                chat_id=MODERATEUR_CHAT_ID,
-                text=f"📣 J'ai supprimé @{msg.from_user.username or msg.from_user.first_name} pour envoi de médias interdits dans le groupe '{msg.chat.title}'."
-            )
+            for mod_id in MODERATEUR_CHAT_IDS:
+                context.bot.send_message(
+                    chat_id=mod_id,
+                    text=f"📣 J'ai supprimé @{msg.from_user.username or msg.from_user.first_name} pour envoi de médias interdits dans le groupe '{msg.chat.title}'."
+                )
 
     if (message.video or message.photo) and message.media_group_id:
         mgid = message.media_group_id
@@ -148,10 +150,11 @@ def traiter_media(update, context):
                     chat_id=message.chat_id,
                     text=f"🚫 @{user.username or user.first_name} a été banni (média interdit détecté)."
                 )
-                context.bot.send_message(
-                    chat_id=MODERATEUR_CHAT_ID,
-                    text=f"📣 J'ai supprimé @{user.username or user.first_name} pour envoi de média interdit dans le groupe '{message.chat.title}'."
-                )
+                for mod_id in MODERATEUR_CHAT_IDS:
+                    context.bot.send_message(
+                        chat_id=mod_id,
+                        text=f"📣 J'ai supprimé @{user.username or user.first_name} pour envoi de média interdit dans le groupe '{message.chat.title}'."
+                    )
         elif chat_type == "private":
             message.reply_text(f"✅ Ce média est autorisé. (hash : {hash_calcule})")
 
